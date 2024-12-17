@@ -1,7 +1,43 @@
 import 'package:flutter/material.dart';
 
-class Home_Screen extends StatelessWidget {
-  const Home_Screen({super.key});
+void main() {
+  runApp(MaterialApp(
+    title: "DoSmart",
+    home: Home_Screen(),
+    theme: ThemeData(primarySwatch: Colors.deepPurple),
+  ));
+}
+
+class Home_Screen extends StatefulWidget {
+  @override
+  _Home_ScreenState createState() => _Home_ScreenState();
+}
+
+class _Home_ScreenState extends State<Home_Screen> {
+  // List of tasks for Today and Upcoming sections
+  List<Map<String, dynamic>> todayTasks = [
+    {'title': "Math Homework", 'priority': "High", 'dueDate': "Dec 15", 'completed': false},
+    {'title': "Team Meeting", 'priority': "Medium", 'dueDate': "Dec 15", 'completed': false},
+  ];
+
+  List<Map<String, dynamic>> upcomingTasks = [
+    {'title': "Science Project", 'priority': "Low", 'dueDate': "Dec 20", 'completed': false},
+    {'title': "Report Submission", 'priority': "High", 'dueDate': "Dec 18", 'completed': false},
+  ];
+
+  // Function to delete a task
+  void deleteTask(List tasks, int index) {
+    setState(() {
+      tasks.removeAt(index);
+    });
+  }
+
+  // Function to mark a task as completed
+  void toggleComplete(List tasks, int index) {
+    setState(() {
+      tasks[index]['completed'] = !tasks[index]['completed'];
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -30,31 +66,17 @@ class Home_Screen extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             SectionTitle(title: "Today"),
-            TaskList(tasks: [
-              TaskCard(
-                title: "Math Homework",
-                priority: "High",
-                dueDate: "Dec 15",
-              ),
-              TaskCard(
-                title: "Team Meeting",
-                priority: "Medium",
-                dueDate: "Dec 15",
-              ),
-            ]),
+            TaskList(
+              tasks: todayTasks,
+              onDelete: (index) => deleteTask(todayTasks, index),
+              onComplete: (index) => toggleComplete(todayTasks, index),
+            ),
             SectionTitle(title: "Upcoming"),
-            TaskList(tasks: [
-              TaskCard(
-                title: "Science Project",
-                priority: "Low",
-                dueDate: "Dec 20",
-              ),
-              TaskCard(
-                title: "Report Submission",
-                priority: "High",
-                dueDate: "Dec 18",
-              ),
-            ]),
+            TaskList(
+              tasks: upcomingTasks,
+              onDelete: (index) => deleteTask(upcomingTasks, index),
+              onComplete: (index) => toggleComplete(upcomingTasks, index),
+            ),
           ],
         ),
       ),
@@ -100,16 +122,30 @@ class SectionTitle extends StatelessWidget {
 }
 
 class TaskList extends StatelessWidget {
-  final List<TaskCard> tasks;
+  final List<Map<String, dynamic>> tasks;
+  final Function(int) onDelete;
+  final Function(int) onComplete;
 
-  TaskList({required this.tasks});
+  TaskList({required this.tasks, required this.onDelete, required this.onComplete});
 
   @override
   Widget build(BuildContext context) {
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
       child: Row(
-        children: tasks,
+        children: tasks.asMap().entries.map((entry) {
+          int idx = entry.key;
+          Map task = entry.value;
+
+          return TaskCard(
+            title: task['title'],
+            priority: task['priority'],
+            dueDate: task['dueDate'],
+            completed: task['completed'],
+            onDelete: () => onDelete(idx),
+            onComplete: () => onComplete(idx),
+          );
+        }).toList(),
       ),
     );
   }
@@ -119,8 +155,18 @@ class TaskCard extends StatelessWidget {
   final String title;
   final String priority;
   final String dueDate;
+  final bool completed;
+  final VoidCallback onDelete;
+  final VoidCallback onComplete;
 
-  TaskCard({required this.title, required this.priority, required this.dueDate});
+  TaskCard({
+    required this.title,
+    required this.priority,
+    required this.dueDate,
+    required this.completed,
+    required this.onDelete,
+    required this.onComplete,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -129,7 +175,7 @@ class TaskCard extends StatelessWidget {
       padding: EdgeInsets.all(10.0),
       width: 150.0,
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: completed ? Colors.grey.shade300 : Colors.white,
         borderRadius: BorderRadius.circular(10.0),
         boxShadow: [
           BoxShadow(color: Colors.grey.shade300, blurRadius: 5.0),
@@ -140,7 +186,11 @@ class TaskCard extends StatelessWidget {
         children: [
           Text(
             title,
-            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+              decoration: completed ? TextDecoration.lineThrough : TextDecoration.none,
+            ),
           ),
           SizedBox(height: 5.0),
           Text(
@@ -148,6 +198,26 @@ class TaskCard extends StatelessWidget {
             style: TextStyle(color: Colors.redAccent),
           ),
           Text("Due: $dueDate"),
+          SizedBox(height: 10.0),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              GestureDetector(
+                onTap: onComplete,
+                child: Icon(
+                  completed ? Icons.check_circle : Icons.check_circle_outline,
+                  color: completed ? Colors.green : Colors.grey,
+                ),
+              ),
+              GestureDetector(
+                onTap: onDelete,
+                child: Icon(
+                  Icons.delete,
+                  color: Colors.redAccent,
+                ),
+              ),
+            ],
+          ),
         ],
       ),
     );
