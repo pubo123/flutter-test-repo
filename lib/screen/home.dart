@@ -1,3 +1,10 @@
+import 'package:first_project/screen/create_task_page.dart';
+import 'package:first_project/screen/task_details_page.dart';
+import 'package:first_project/screen/calendar_page.dart';
+import 'package:first_project/screen/notification_page.dart';
+import 'package:first_project/screen/team_page.dart';
+import 'package:first_project/screen/more_options_page.dart';
+import 'package:first_project/screen/profile_page.dart';
 import 'package:flutter/material.dart';
 
 void main() {
@@ -14,6 +21,16 @@ class Home_Screen extends StatefulWidget {
 }
 
 class _Home_ScreenState extends State<Home_Screen> {
+  int _currentIndex = 0;
+
+  final List<Widget> _pages = [
+    HomeScreenBody(),     // The home screen body
+    CalendarPage(),       // Calendar Page
+    NotificationsPage(),  // Notifications Page
+    TeamsPage(),          // Teams Page
+    MoreOptionsPage(),    // More Options Page
+  ];
+
   // List of tasks for Today and Upcoming sections
   List<Map<String, dynamic>> todayTasks = [
     {'title': "Math Homework", 'priority': "High", 'dueDate': "Dec 15", 'completed': false},
@@ -56,39 +73,29 @@ class _Home_ScreenState extends State<Home_Screen> {
             icon: Icon(Icons.account_circle),
             onPressed: () {
               // Navigate to profile page
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => ProfilePage()),
+              );
             },
           ),
         ],
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            SectionTitle(title: "Today"),
-            TaskList(
-              tasks: todayTasks,
-              onDelete: (index) => deleteTask(todayTasks, index),
-              onComplete: (index) => toggleComplete(todayTasks, index),
-            ),
-            SectionTitle(title: "Upcoming"),
-            TaskList(
-              tasks: upcomingTasks,
-              onDelete: (index) => deleteTask(upcomingTasks, index),
-              onComplete: (index) => toggleComplete(upcomingTasks, index),
-            ),
-          ],
-        ),
-      ),
+      body: _pages[_currentIndex], // Load the selected page
       floatingActionButton: FloatingActionButton(
         onPressed: () {
-          // Add task creation functionality
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => CreateTaskPage()),
+          );
         },
         backgroundColor: Colors.deepPurple,
         child: Icon(Icons.add),
       ),
       bottomNavigationBar: BottomNavigationBar(
+        currentIndex: _currentIndex,
         selectedItemColor: Colors.deepPurple,
+        unselectedItemColor: Colors.grey,
         items: [
           BottomNavigationBarItem(icon: Icon(Icons.home), label: "Home"),
           BottomNavigationBarItem(icon: Icon(Icons.calendar_today), label: "Calendar"),
@@ -97,8 +104,54 @@ class _Home_ScreenState extends State<Home_Screen> {
           BottomNavigationBarItem(icon: Icon(Icons.more_horiz), label: "More"),
         ],
         onTap: (index) {
-          // Handle navigation between sections
+          setState(() {
+            _currentIndex = index; // Update the index to load the selected page
+          });
         },
+      ),
+    );
+  }
+}
+
+class HomeScreenBody extends StatelessWidget {
+  final List<Map<String, dynamic>> todayTasks = [
+    {'title': "Math Homework", 'priority': "High", 'dueDate': "Dec 15", 'completed': false},
+    {'title': "Team Meeting", 'priority': "Medium", 'dueDate': "Dec 15", 'completed': false},
+  ];
+
+  final List<Map<String, dynamic>> upcomingTasks = [
+    {'title': "Science Project", 'priority': "Low", 'dueDate': "Dec 20", 'completed': false},
+    {'title': "Report Submission", 'priority': "High", 'dueDate': "Dec 18", 'completed': false},
+  ];
+
+  void deleteTask(List tasks, int index) {
+    tasks.removeAt(index);
+  }
+
+  void toggleComplete(List tasks, int index) {
+    tasks[index]['completed'] = !tasks[index]['completed'];
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.all(16.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SectionTitle(title: "Today"),
+          TaskList(
+            tasks: todayTasks,
+            onDelete: (index) => deleteTask(todayTasks, index),
+            onComplete: (index) => toggleComplete(todayTasks, index),
+          ),
+          SectionTitle(title: "Upcoming"),
+          TaskList(
+            tasks: upcomingTasks,
+            onDelete: (index) => deleteTask(upcomingTasks, index),
+            onComplete: (index) => toggleComplete(upcomingTasks, index),
+          ),
+        ],
       ),
     );
   }
@@ -170,55 +223,70 @@ class TaskCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      margin: EdgeInsets.only(right: 10.0),
-      padding: EdgeInsets.all(10.0),
-      width: 150.0,
-      decoration: BoxDecoration(
-        color: completed ? Colors.grey.shade300 : Colors.white,
-        borderRadius: BorderRadius.circular(10.0),
-        boxShadow: [
-          BoxShadow(color: Colors.grey.shade300, blurRadius: 5.0),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            title,
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-              decoration: completed ? TextDecoration.lineThrough : TextDecoration.none,
+    return GestureDetector(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => TaskDetailsPage(
+              title: title,
+              priority: priority,
+              dueDate: dueDate,
+              notes: "This is a sample note for the task.",
             ),
           ),
-          SizedBox(height: 5.0),
-          Text(
-            "Priority: $priority",
-            style: TextStyle(color: Colors.redAccent),
-          ),
-          Text("Due: $dueDate"),
-          SizedBox(height: 10.0),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              GestureDetector(
-                onTap: onComplete,
-                child: Icon(
-                  completed ? Icons.check_circle : Icons.check_circle_outline,
-                  color: completed ? Colors.green : Colors.grey,
-                ),
+        );
+      },
+      child: Container(
+        margin: EdgeInsets.only(right: 10.0),
+        padding: EdgeInsets.all(10.0),
+        width: 150.0,
+        decoration: BoxDecoration(
+          color: completed ? Colors.grey.shade300 : Colors.white,
+          borderRadius: BorderRadius.circular(10.0),
+          boxShadow: [
+            BoxShadow(color: Colors.grey.shade300, blurRadius: 5.0),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              title,
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                decoration: completed ? TextDecoration.lineThrough : TextDecoration.none,
               ),
-              GestureDetector(
-                onTap: onDelete,
-                child: Icon(
-                  Icons.delete,
-                  color: Colors.redAccent,
+            ),
+            SizedBox(height: 5.0),
+            Text(
+              "Priority: $priority",
+              style: TextStyle(color: Colors.redAccent),
+            ),
+            Text("Due: $dueDate"),
+            SizedBox(height: 10.0),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                GestureDetector(
+                  onTap: onComplete,
+                  child: Icon(
+                    completed ? Icons.check_circle : Icons.check_circle_outline,
+                    color: completed ? Colors.green : Colors.grey,
+                  ),
                 ),
-              ),
-            ],
-          ),
-        ],
+                GestureDetector(
+                  onTap: onDelete,
+                  child: Icon(
+                    Icons.delete,
+                    color: Colors.redAccent,
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }
