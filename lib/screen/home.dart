@@ -6,6 +6,7 @@ import 'package:first_project/screen/team_page.dart';
 import 'package:first_project/screen/more_options_page.dart';
 import 'package:first_project/screen/profile_page.dart';
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 
 void main() {
   runApp(MaterialApp(
@@ -23,36 +24,42 @@ class Home_Screen extends StatefulWidget {
 class _Home_ScreenState extends State<Home_Screen> {
   int _currentIndex = 0;
 
-  final List<Widget> _pages = [
-    HomeScreenBody(),     // The home screen body
-    CalendarPage(),       // Calendar Page
-    NotificationsPage(),  // Notifications Page
-    TeamsPage(),          // Teams Page
-    MoreOptionsPage(),    // More Options Page
-  ];
-
-  // List of tasks for Today and Upcoming sections
   List<Map<String, dynamic>> todayTasks = [
-    {'title': "Math Homework", 'priority': "High", 'dueDate': "Dec 15", 'completed': false},
-    {'title': "Team Meeting", 'priority': "Medium", 'dueDate': "Dec 15", 'completed': false},
+    {'title': "Math Homework", 'priority': "High", 'dueDate': "2024-03-15", 'completed': false},
+    {'title': "Team Meeting", 'priority': "Medium", 'dueDate': "2024-03-15", 'completed': false},
   ];
 
   List<Map<String, dynamic>> upcomingTasks = [
-    {'title': "Science Project", 'priority': "Low", 'dueDate': "Dec 20", 'completed': false},
-    {'title': "Report Submission", 'priority': "High", 'dueDate': "Dec 18", 'completed': false},
+    {'title': "Science Project", 'priority': "Low", 'dueDate': "2024-03-20", 'completed': false},
+    {'title': "Report Submission", 'priority': "High", 'dueDate': "2024-03-18", 'completed': false},
   ];
 
-  // Function to delete a task
-  void deleteTask(List tasks, int index) {
-    setState(() {
-      tasks.removeAt(index);
-    });
+  final List<Widget> _pages = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _pages.addAll([
+      HomeScreenBody(todayTasks: todayTasks, upcomingTasks: upcomingTasks),
+      CalendarPage(),
+      NotificationsPage(),
+      TeamsPage(),
+      MoreOptionsPage(),
+    ]);
   }
 
-  // Function to mark a task as completed
-  void toggleComplete(List tasks, int index) {
+  // Function to add new tasks dynamically
+  void addNewTask(Map<String, dynamic> newTask) {
+    DateTime taskDueDate = DateTime.parse(newTask['dueDate']);
+    DateTime today = DateTime.now();
+
     setState(() {
-      tasks[index]['completed'] = !tasks[index]['completed'];
+      if (taskDueDate.difference(today).inDays <= 2) {
+        todayTasks.add(newTask);
+      } else {
+        upcomingTasks.add(newTask);
+      }
+      _pages[0] = HomeScreenBody(todayTasks: todayTasks, upcomingTasks: upcomingTasks);
     });
   }
 
@@ -72,7 +79,6 @@ class _Home_ScreenState extends State<Home_Screen> {
           IconButton(
             icon: Icon(Icons.account_circle),
             onPressed: () {
-              // Navigate to profile page
               Navigator.push(
                 context,
                 MaterialPageRoute(builder: (context) => ProfilePage()),
@@ -81,13 +87,17 @@ class _Home_ScreenState extends State<Home_Screen> {
           ),
         ],
       ),
-      body: _pages[_currentIndex], // Load the selected page
+      body: _pages[_currentIndex], // Load the selected page dynamically
       floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          Navigator.push(
+        onPressed: () async {
+          final newTask = await Navigator.push(
             context,
             MaterialPageRoute(builder: (context) => CreateTaskPage()),
           );
+
+          if (newTask != null) {
+            addNewTask(newTask);
+          }
         },
         backgroundColor: Colors.deepPurple,
         child: Icon(Icons.add),
@@ -105,7 +115,7 @@ class _Home_ScreenState extends State<Home_Screen> {
         ],
         onTap: (index) {
           setState(() {
-            _currentIndex = index; // Update the index to load the selected page
+            _currentIndex = index;
           });
         },
       ),
@@ -114,23 +124,10 @@ class _Home_ScreenState extends State<Home_Screen> {
 }
 
 class HomeScreenBody extends StatelessWidget {
-  final List<Map<String, dynamic>> todayTasks = [
-    {'title': "Math Homework", 'priority': "High", 'dueDate': "Dec 15", 'completed': false},
-    {'title': "Team Meeting", 'priority': "Medium", 'dueDate': "Dec 15", 'completed': false},
-  ];
+  final List<Map<String, dynamic>> todayTasks;
+  final List<Map<String, dynamic>> upcomingTasks;
 
-  final List<Map<String, dynamic>> upcomingTasks = [
-    {'title': "Science Project", 'priority': "Low", 'dueDate': "Dec 20", 'completed': false},
-    {'title': "Report Submission", 'priority': "High", 'dueDate': "Dec 18", 'completed': false},
-  ];
-
-  void deleteTask(List tasks, int index) {
-    tasks.removeAt(index);
-  }
-
-  void toggleComplete(List tasks, int index) {
-    tasks[index]['completed'] = !tasks[index]['completed'];
-  }
+  HomeScreenBody({required this.todayTasks, required this.upcomingTasks});
 
   @override
   Widget build(BuildContext context) {
@@ -140,17 +137,9 @@ class HomeScreenBody extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           SectionTitle(title: "Today"),
-          TaskList(
-            tasks: todayTasks,
-            onDelete: (index) => deleteTask(todayTasks, index),
-            onComplete: (index) => toggleComplete(todayTasks, index),
-          ),
+          TaskList(tasks: todayTasks),
           SectionTitle(title: "Upcoming"),
-          TaskList(
-            tasks: upcomingTasks,
-            onDelete: (index) => deleteTask(upcomingTasks, index),
-            onComplete: (index) => toggleComplete(upcomingTasks, index),
-          ),
+          TaskList(tasks: upcomingTasks),
         ],
       ),
     );
@@ -176,118 +165,18 @@ class SectionTitle extends StatelessWidget {
 
 class TaskList extends StatelessWidget {
   final List<Map<String, dynamic>> tasks;
-  final Function(int) onDelete;
-  final Function(int) onComplete;
 
-  TaskList({required this.tasks, required this.onDelete, required this.onComplete});
+  TaskList({required this.tasks});
 
   @override
   Widget build(BuildContext context) {
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      child: Row(
-        children: tasks.asMap().entries.map((entry) {
-          int idx = entry.key;
-          Map task = entry.value;
-
-          return TaskCard(
-            title: task['title'],
-            priority: task['priority'],
-            dueDate: task['dueDate'],
-            completed: task['completed'],
-            onDelete: () => onDelete(idx),
-            onComplete: () => onComplete(idx),
-          );
-        }).toList(),
-      ),
-    );
-  }
-}
-
-class TaskCard extends StatelessWidget {
-  final String title;
-  final String priority;
-  final String dueDate;
-  final bool completed;
-  final VoidCallback onDelete;
-  final VoidCallback onComplete;
-
-  TaskCard({
-    required this.title,
-    required this.priority,
-    required this.dueDate,
-    required this.completed,
-    required this.onDelete,
-    required this.onComplete,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => TaskDetailsPage(
-              title: title,
-              priority: priority,
-              dueDate: dueDate,
-              notes: "This is a sample note for the task.",
-            ),
-          ),
+    return Column(
+      children: tasks.map((task) {
+        return ListTile(
+          title: Text(task['title']),
+          subtitle: Text("Priority: ${task['priority']} • Due: ${task['dueDate']}"),
         );
-      },
-      child: Container(
-        margin: EdgeInsets.only(right: 10.0),
-        padding: EdgeInsets.all(10.0),
-        width: 150.0,
-        decoration: BoxDecoration(
-          color: completed ? Colors.grey.shade300 : Colors.white,
-          borderRadius: BorderRadius.circular(10.0),
-          boxShadow: [
-            BoxShadow(color: Colors.grey.shade300, blurRadius: 5.0),
-          ],
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              title,
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-                decoration: completed ? TextDecoration.lineThrough : TextDecoration.none,
-              ),
-            ),
-            SizedBox(height: 5.0),
-            Text(
-              "Priority: $priority",
-              style: TextStyle(color: Colors.redAccent),
-            ),
-            Text("Due: $dueDate"),
-            SizedBox(height: 10.0),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                GestureDetector(
-                  onTap: onComplete,
-                  child: Icon(
-                    completed ? Icons.check_circle : Icons.check_circle_outline,
-                    color: completed ? Colors.green : Colors.grey,
-                  ),
-                ),
-                GestureDetector(
-                  onTap: onDelete,
-                  child: Icon(
-                    Icons.delete,
-                    color: Colors.redAccent,
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
+      }).toList(),
     );
   }
 }
