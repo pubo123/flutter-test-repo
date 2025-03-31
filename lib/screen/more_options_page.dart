@@ -16,7 +16,6 @@ class MoreOptionsPage extends StatelessWidget {
             title: Text("Feedback"),
             subtitle: Text("Share your feedback with us."),
             onTap: () {
-              // Navigate to Feedback Page (to be created)
               Navigator.push(
                 context,
                 MaterialPageRoute(builder: (context) => FeedbackPage()),
@@ -29,7 +28,6 @@ class MoreOptionsPage extends StatelessWidget {
             title: Text("Themes"),
             subtitle: Text("Change the app theme."),
             onTap: () {
-              // Navigate to Themes Page (to be created)
               Navigator.push(
                 context,
                 MaterialPageRoute(builder: (context) => ThemesPage()),
@@ -60,8 +58,43 @@ class MoreOptionsPage extends StatelessWidget {
   }
 }
 
-// Placeholder for Feedback Page
-class FeedbackPage extends StatelessWidget {
+// Feedback Page with input field, star rating, and submit button
+class FeedbackPage extends StatefulWidget {
+  @override
+  _FeedbackPageState createState() => _FeedbackPageState();
+}
+
+class _FeedbackPageState extends State<FeedbackPage> {
+  final TextEditingController _feedbackController = TextEditingController();
+  int _rating = 0; // Default rating
+
+  void _submitFeedback() {
+    if (_feedbackController.text.isNotEmpty || _rating > 0) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Thank you for your feedback! ⭐$_rating")),
+      );
+      _feedbackController.clear();
+      setState(() {
+        _rating = 0; // Reset rating
+      });
+    }
+  }
+
+  Widget _buildStar(int starIndex) {
+    return GestureDetector(
+      onTap: () {
+        setState(() {
+          _rating = starIndex;
+        });
+      },
+      child: Icon(
+        _rating >= starIndex ? Icons.star : Icons.star_border,
+        color: Colors.amber,
+        size: 40,
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -69,18 +102,53 @@ class FeedbackPage extends StatelessWidget {
         title: Text("Feedback"),
         backgroundColor: Colors.deepPurple,
       ),
-      body: Center(
-        child: Text(
-          "Feedback Form Coming Soon...",
-          style: TextStyle(fontSize: 18),
+      body: Padding(
+        padding: EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text("We value your feedback!", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            SizedBox(height: 10),
+            TextField(
+              controller: _feedbackController,
+              decoration: InputDecoration(
+                hintText: "Type your feedback here...",
+                border: OutlineInputBorder(),
+              ),
+              maxLines: 4,
+            ),
+            SizedBox(height: 20),
+
+            Text("Rate the app:", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: List.generate(5, (index) => _buildStar(index + 1)),
+            ),
+
+            SizedBox(height: 20),
+            Center(
+              child: ElevatedButton(
+                onPressed: _submitFeedback,
+                style: ElevatedButton.styleFrom(backgroundColor: Colors.deepPurple),
+                child: Text("Submit", style: TextStyle(color: Colors.grey)),
+              ),
+            ),
+          ],
         ),
       ),
     );
   }
 }
 
-// Placeholder for Themes Page
-class ThemesPage extends StatelessWidget {
+// Themes Page with Light and Dark Mode selection
+class ThemesPage extends StatefulWidget {
+  @override
+  _ThemesPageState createState() => _ThemesPageState();
+}
+
+class _ThemesPageState extends State<ThemesPage> {
+  String _selectedTheme = "Light"; // Default theme
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -88,11 +156,35 @@ class ThemesPage extends StatelessWidget {
         title: Text("Themes"),
         backgroundColor: Colors.deepPurple,
       ),
-      body: Center(
-        child: Text(
-          "Themes Feature Coming Soon...",
-          style: TextStyle(fontSize: 18),
-        ),
+      body: Column(
+        children: [
+          ListTile(
+            leading: Icon(Icons.light_mode, color: Colors.amber),
+            title: Text("Light Theme"),
+            trailing: Radio(
+              value: "Light",
+              groupValue: _selectedTheme,
+              onChanged: (value) {
+                setState(() {
+                  _selectedTheme = value.toString();
+                });
+              },
+            ),
+          ),
+          ListTile(
+            leading: Icon(Icons.dark_mode, color: Colors.black),
+            title: Text("Dark Theme"),
+            trailing: Radio(
+              value: "Dark",
+              groupValue: _selectedTheme,
+              onChanged: (value) {
+                setState(() {
+                  _selectedTheme = value.toString();
+                });
+              },
+            ),
+          ),
+        ],
       ),
     );
   }

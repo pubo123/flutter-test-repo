@@ -1,0 +1,2 @@
+C:/myproject/DoSmart_Task_Management_App/android/app/.cxx/Debug/c1o4x202/x86_64/CMakeFiles/edit_cache.dir
+C:/myproject/DoSmart_Task_Management_App/android/app/.cxx/Debug/c1o4x202/x86_64/CMakeFiles/rebuild_cache.dir

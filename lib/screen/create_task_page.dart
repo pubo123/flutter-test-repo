@@ -99,7 +99,7 @@ class _CreateTaskPageState extends State<CreateTaskPage> {
               SizedBox(height: 20),
               ElevatedButton(
                 onPressed: _saveTask,
-                child: Text('Save Task'),
+                child: Text('Save Task', style: TextStyle(color: Colors.grey)),
                 style: ElevatedButton.styleFrom(backgroundColor: Colors.deepPurple),
               ),
             ],

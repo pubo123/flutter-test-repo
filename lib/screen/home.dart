@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart';
 import 'package:first_project/screen/create_task_page.dart';
 import 'package:first_project/screen/task_details_page.dart';
 import 'package:first_project/screen/calendar_page.dart';
@@ -5,7 +6,6 @@ import 'package:first_project/screen/notification_page.dart';
 import 'package:first_project/screen/team_page.dart';
 import 'package:first_project/screen/more_options_page.dart';
 import 'package:first_project/screen/profile_page.dart';
-import 'package:flutter/material.dart';
 
 void main() {
   runApp(MaterialApp(
@@ -22,10 +22,11 @@ class Home_Screen extends StatefulWidget {
 
 class _Home_ScreenState extends State<Home_Screen> {
   int _currentIndex = 0;
+  String _searchQuery = "";
 
   List<Map<String, dynamic>> todayTasks = [
     {'title': "Math Homework", 'priority': "High", 'dueDate': "2025-03-19", 'notes': "Complete all exercises.", 'completed': false},
-    {'title': "Team Meeting", 'priority': "High", 'dueDate': "2025-03-19", 'notes': "Discuss project milestones.", 'completed': false},
+    {'title': "Team Meeting", 'priority': "High", 'dueDate': "2025-03-28", 'notes': "Discuss project milestones.", 'completed': false},
   ];
 
   List<Map<String, dynamic>> upcomingTasks = [
@@ -33,18 +34,28 @@ class _Home_ScreenState extends State<Home_Screen> {
     {'title': "Report Submission", 'priority': "High", 'dueDate': "2025-04-14", 'notes': "Submit before deadline.", 'completed': false},
   ];
 
-  final List<Widget> _pages = [];
+  late List<Widget> _pages;
 
   @override
   void initState() {
     super.initState();
-    _pages.addAll([
-      HomeScreenBody(todayTasks: todayTasks, upcomingTasks: upcomingTasks, onDeleteTask: deleteTask, onUpdateTask: updateTask),
+    _initializePages();
+  }
+
+  void _initializePages() {
+    _pages = [
+      HomeScreenBody(
+        todayTasks: todayTasks,
+        upcomingTasks: upcomingTasks,
+        onDeleteTask: deleteTask,
+        onUpdateTask: updateTask,
+        searchQuery: _searchQuery,
+      ),
       CalendarPage(),
       NotificationsPage(),
       TeamsPage(),
       MoreOptionsPage(),
-    ]);
+    ];
   }
 
   void addNewTask(Map<String, dynamic> newTask) {
@@ -57,7 +68,7 @@ class _Home_ScreenState extends State<Home_Screen> {
       } else {
         upcomingTasks.add(newTask);
       }
-      refreshHomeScreen();
+      _initializePages(); // Refresh home screen
     });
   }
 
@@ -65,42 +76,34 @@ class _Home_ScreenState extends State<Home_Screen> {
     setState(() {
       todayTasks.removeWhere((task) => task['title'] == taskTitle);
       upcomingTasks.removeWhere((task) => task['title'] == taskTitle);
-      refreshHomeScreen();
+      _initializePages();
     });
   }
 
   void updateTask(String oldTitle, String newTitle, String newNotes) {
-  setState(() {
-    bool found = false;
-
-    for (var task in todayTasks) {
-      if (task['title'] == oldTitle) {
-        task['title'] = newTitle;
-        task['notes'] = newNotes;
-        found = true;
-        break;
-      }
-    }
-    
-    if (!found) {
-      for (var task in upcomingTasks) {
+    setState(() {
+      bool found = false;
+      for (var task in todayTasks) {
         if (task['title'] == oldTitle) {
           task['title'] = newTitle;
           task['notes'] = newNotes;
+          found = true;
           break;
         }
       }
-    }
 
-    // Ensure UI refreshes
-    _pages[0] = HomeScreenBody(
-      todayTasks: todayTasks, 
-      upcomingTasks: upcomingTasks, 
-      onDeleteTask: deleteTask, 
-      onUpdateTask: updateTask
-    );
-  });
-}
+      if (!found) {
+        for (var task in upcomingTasks) {
+          if (task['title'] == oldTitle) {
+            task['title'] = newTitle;
+            task['notes'] = newNotes;
+            break;
+          }
+        }
+      }
+      _initializePages();
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -111,7 +114,12 @@ class _Home_ScreenState extends State<Home_Screen> {
         actions: [
           IconButton(
             icon: Icon(Icons.search),
-            onPressed: () {},
+            onPressed: () {
+              showSearch(
+                context: context,
+                delegate: TaskSearchDelegate(todayTasks + upcomingTasks),
+              );
+            },
           ),
           IconButton(
             icon: Icon(Icons.account_circle),
@@ -155,8 +163,9 @@ class _Home_ScreenState extends State<Home_Screen> {
       ),
     );
   }
-  
-  void refreshHomeScreen() {}
+}
+
+TaskSearchDelegate(List<Map<String, dynamic>> list) {
 }
 
 class HomeScreenBody extends StatelessWidget {
@@ -164,83 +173,62 @@ class HomeScreenBody extends StatelessWidget {
   final List<Map<String, dynamic>> upcomingTasks;
   final Function(String) onDeleteTask;
   final Function(String, String, String) onUpdateTask;
+  final String searchQuery;
 
-  HomeScreenBody({required this.todayTasks, required this.upcomingTasks, required this.onDeleteTask, required this.onUpdateTask});
+  HomeScreenBody({
+    required this.todayTasks,
+    required this.upcomingTasks,
+    required this.onDeleteTask,
+    required this.onUpdateTask,
+    required this.searchQuery,
+  });
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.all(16.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          SectionTitle(title: "Today"),
-          TaskList(tasks: todayTasks, onDelete: onDeleteTask, onUpdate: onUpdateTask),
-          SectionTitle(title: "Upcoming"),
-          TaskList(tasks: upcomingTasks, onDelete: onDeleteTask, onUpdate: onUpdateTask),
-        ],
-      ),
+    return ListView(
+      padding: EdgeInsets.all(16.0),
+      children: [
+        Text("Today", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+        ...todayTasks.map((task) => TaskTile(task, onDeleteTask, onUpdateTask)),
+        SizedBox(height: 20),
+        Text("Upcoming", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+        ...upcomingTasks.map((task) => TaskTile(task, onDeleteTask, onUpdateTask)),
+      ],
     );
   }
 }
 
-class SectionTitle extends StatelessWidget {
-  final String title;
+class TaskTile extends StatelessWidget {
+  final Map<String, dynamic> task;
+  final Function(String) onDeleteTask;
+  final Function(String, String, String) onUpdateTask;
 
-  SectionTitle({required this.title});
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8.0),
-      child: Text(
-        title,
-        style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-      ),
-    );
-  }
-}
-
-class TaskList extends StatelessWidget {
-  final List<Map<String, dynamic>> tasks;
-  final Function(String) onDelete;
-  final Function(String, String, String) onUpdate;
-
-  TaskList({required this.tasks, required this.onDelete, required this.onUpdate});
+  TaskTile(this.task, this.onDeleteTask, this.onUpdateTask);
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: tasks.map((task) => GestureDetector(
-        onTap: () async {
-          final updatedTask = await Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => TaskDetailsPage(
-                task: task,
-                onDelete: () {
-                  onDelete(task['title']);
-                  Navigator.pop(context, 'deleted'); // Ensure we return 'deleted' if task is removed
-                },
-                onUpdate: (newTitle, newNotes) {
-                  onUpdate(task['title'], newTitle, newNotes);
-                },
-              ),
-            ),
-          );
-
-          if (updatedTask == 'deleted') {
-            onDelete(task['title']); // Ensure task is removed from the UI
-          }
+    return ListTile(
+      title: Text(task['title']),
+      subtitle: Text("Priority: ${task['priority']} • Due: ${task['dueDate']}"),
+      trailing: IconButton(
+        icon: Icon(Icons.delete, color: Colors.red),
+        onPressed: () {
+          onDeleteTask(task['title']);
         },
-        child: Card(
-          child: ListTile(
-            title: Text(task['title']),
-            subtitle: Text("Priority: ${task['priority']} • Due: ${task['dueDate']}"),
-            trailing: Icon(Icons.arrow_forward_ios, size: 16),
+      ),
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => TaskDetailsPage(
+              task: task,
+              onDelete: () => onDeleteTask(task['title']),
+              onUpdate: (newTitle, newNotes) => onUpdateTask(task['title'], newTitle, newNotes),
+              title: task['title'],
+            ),
           ),
-        ),
-        )).toList(),
+        );
+      },
     );
   }
 }

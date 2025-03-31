@@ -5,7 +5,7 @@ class TaskDetailsPage extends StatefulWidget {
   final Function onDelete;
   final Function(String, String) onUpdate;
 
-  TaskDetailsPage({required this.task, required this.onDelete, required this.onUpdate});
+  TaskDetailsPage({required this.task, required this.onDelete, required this.onUpdate, required title});
 
   @override
   _TaskDetailsPageState createState() => _TaskDetailsPageState();
@@ -92,7 +92,7 @@ class _TaskDetailsPageState extends State<TaskDetailsPage> {
             SizedBox(height: 20),
             ElevatedButton(
               onPressed: saveChanges,
-              child: Text("Save Changes"),
+              child: Text("Save Changes", style: TextStyle(color: Colors.grey)),
               style: ElevatedButton.styleFrom(backgroundColor: Colors.deepPurple),
             ),
           ],
