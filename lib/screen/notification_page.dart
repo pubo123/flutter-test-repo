@@ -3,10 +3,10 @@ import 'package:intl/intl.dart';
 
 class NotificationsPage extends StatelessWidget {
   final List<Map<String, String>> notifications = [
-    {'message': "Task 'Math Homework' is overdue!", 'dueDate': "2025-03-19"},
-    {'message': "Upcoming deadline for 'Team Meeting'.", 'dueDate': "2025-03-28"},
-    {'message': "Task 'Science Project' is due soon!", 'dueDate': "2025-04-13"},
-    {'message': "Task 'Report Submission' is due soon!", 'dueDate': "2025-04-14"},
+    {'message': "Task 'Math Homework' is overdue!", 'dueDate': "2025-04-18"},
+    {'message': "Upcoming deadline for 'Team Meeting'.", 'dueDate': "2025-04-18"},
+    {'message': "Task 'Science Project' is due soon!", 'dueDate': "2025-05-12"},
+    {'message': "Task 'Report Submission' is due soon!", 'dueDate': "2025-05-14"},
   ];
 
   @override

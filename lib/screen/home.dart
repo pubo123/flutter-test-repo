@@ -25,13 +25,13 @@ class _Home_ScreenState extends State<Home_Screen> {
   String _searchQuery = "";
 
   List<Map<String, dynamic>> todayTasks = [
-    {'title': "Math Homework", 'priority': "High", 'dueDate': "2025-03-19", 'notes': "Complete all exercises.", 'completed': false},
-    {'title': "Team Meeting", 'priority': "High", 'dueDate': "2025-03-28", 'notes': "Discuss project milestones.", 'completed': false},
+    {'title': "Math Homework", 'priority': "High", 'dueDate': "2025-04-18", 'notes': "Complete all exercises.", 'completed': false},
+    {'title': "Team Meeting", 'priority': "High", 'dueDate': "2025-04-18", 'notes': "Discuss project milestones.", 'completed': false},
   ];
 
   List<Map<String, dynamic>> upcomingTasks = [
-    {'title': "Science Project", 'priority': "Low", 'dueDate': "2025-04-13", 'notes': "Prepare presentation slides.", 'completed': false},
-    {'title': "Report Submission", 'priority': "High", 'dueDate': "2025-04-14", 'notes': "Submit before deadline.", 'completed': false},
+    {'title': "Science Project", 'priority': "Low", 'dueDate': "2025-05-12", 'notes': "Prepare presentation slides.", 'completed': false},
+    {'title': "Report Submission", 'priority': "High", 'dueDate': "2025-05-14", 'notes': "Submit before deadline.", 'completed': false},
   ];
 
   late List<Widget> _pages;

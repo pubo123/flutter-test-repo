@@ -3,10 +3,10 @@ import 'package:intl/intl.dart';
 
 class CalendarPage extends StatelessWidget {
   final List<Map<String, String>> tasks = [
-    {'title': "Math Homework", 'dueDate': "2025-03-19"},
-    {'title': "Team Meeting", 'dueDate': "2025-03-28"},
-    {'title': "Science Project", 'dueDate': "2025-04-13"},
-    {'title': "Report Submission", 'dueDate': "2025-04-14"},
+    {'title': "Math Homework", 'dueDate': "2025-04-18"},
+    {'title': "Team Meeting", 'dueDate': "2025-04-18"},
+    {'title': "Science Project", 'dueDate': "2025-05-12"},
+    {'title': "Report Submission", 'dueDate': "2025-05-14"},
   ];
 
   @override
