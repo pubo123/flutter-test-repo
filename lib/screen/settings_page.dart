@@ -51,11 +51,6 @@ class _SettingsPageState extends State<SettingsPage> {
           _buildSettingsOption(Icons.help, "Help & Support", () {
             // Navigate to Help page
           }),
-
-          // About
-          _buildSettingsOption(Icons.info, "About", () {
-            // Show app details
-          }),
         ],
       ),
     );

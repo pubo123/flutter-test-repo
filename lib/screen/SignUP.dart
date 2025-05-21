@@ -1,38 +1,62 @@
-import 'package:first_project/data/auth_data.dart';
 import 'package:flutter/material.dart';
 import 'package:first_project/const/colors.dart';
+import 'package:first_project/data/auth_data.dart';
 
 class SignUp_Screen extends StatefulWidget {
-   final VoidCallback show;
-  const SignUp_Screen(this.show,{super.key});
+  final VoidCallback show;
+  const SignUp_Screen(this.show, {super.key});
 
   @override
   State<SignUp_Screen> createState() => _SignUp_ScreenState();
 }
 
 class _SignUp_ScreenState extends State<SignUp_Screen> {
-  FocusNode _focusNode1 = FocusNode();
-  FocusNode _focusNode2 = FocusNode();
-  FocusNode _focusNode3 = FocusNode();
+  final FocusNode _focusNode1 = FocusNode();
+  final FocusNode _focusNode2 = FocusNode();
+  final FocusNode _focusNode3 = FocusNode();
 
-  final email = TextEditingController();
-  final password = TextEditingController();
-  final PasswordConfirm = TextEditingController();
-  
-  var backgroundColors;
+  final TextEditingController email = TextEditingController();
+  final TextEditingController password = TextEditingController();
+  final TextEditingController passwordConfirm = TextEditingController();
+
+  bool _obscurePassword = true;
+  bool _obscureConfirm = true;
+
+  final Color backgroundColors = Colors.grey[200]!;
 
   @override
-  void initState() {
-    super.initState();
-    _focusNode1.addListener(() {
-      setState(() {});     
-    });
-    _focusNode2.addListener(() {
-      setState(() {});
-    });
-    _focusNode3.addListener(() {
-      setState(() {}); 
-    });
+  void dispose() {
+    _focusNode1.dispose();
+    _focusNode2.dispose();
+    _focusNode3.dispose();
+    email.dispose();
+    password.dispose();
+    passwordConfirm.dispose();
+    super.dispose();
+  }
+
+  void _handleSignUp() async {
+    final String emailText = email.text.trim();
+    final String passText = password.text.trim();
+    final String confirmText = passwordConfirm.text.trim();
+
+    if (passText != confirmText) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("❗ Passwords do not match")),
+      );
+      return;
+    }
+
+    try {
+      await AuthenticationRemote().register(emailText, passText, confirmText);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("✅ Account created successfully")),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("❌ Error: ${e.toString()}")),
+      );
+    }
   }
 
   @override
@@ -43,19 +67,22 @@ class _SignUp_ScreenState extends State<SignUp_Screen> {
         child: SingleChildScrollView(
           child: Column(
             children: [
-              SizedBox(height: 20),
-              image(),
-              SizedBox(height: 50),
-              textfield(email,_focusNode1, 'Email', Icons.email),
-              SizedBox(height: 10),
-              textfield(password,_focusNode2, 'Password', Icons.password),
-              SizedBox(height: 10),
-              textfield(PasswordConfirm,_focusNode3, 'PasswordConfirm', 
-                  Icons.password),
-              SizedBox(height: 8),
-              account(),
-              SizedBox(height: 20),
-              SignUP_bottom(),
+              const SizedBox(height: 20),
+              _buildImage(),
+              const SizedBox(height: 50),
+              _buildTextField(email, _focusNode1, 'Email', Icons.email),
+              const SizedBox(height: 10),
+              _buildTextField(password, _focusNode2, 'Password', Icons.lock, obscure: _obscurePassword, toggle: () {
+                setState(() => _obscurePassword = !_obscurePassword);
+              }),
+              const SizedBox(height: 10),
+              _buildTextField(passwordConfirm, _focusNode3, 'Confirm Password', Icons.lock_outline, obscure: _obscureConfirm, toggle: () {
+                setState(() => _obscureConfirm = !_obscureConfirm);
+              }),
+              const SizedBox(height: 8),
+              _buildAccountSwitch(),
+              const SizedBox(height: 20),
+              _buildSignUpButton(),
             ],
           ),
         ),
@@ -63,102 +90,96 @@ class _SignUp_ScreenState extends State<SignUp_Screen> {
     );
   }
 
-  Widget account() {
+  Widget _buildAccountSwitch() {
     return Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 15),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  Text(
-                    "Do you have an account?",
-                    style: TextStyle(color: Colors.grey[700], fontSize: 14),
-                  ),
-                  SizedBox(width: 5),
-                  GestureDetector(
-                    onTap: widget.show,
-                    child: Text(
-                    'Login',
-                    style: TextStyle(
-                      color: Colors.blue, 
-                      fontSize: 14,
-                      fontWeight: FontWeight.bold),
-                    )
-                  )
-                ],
-              ),
-            );
+      padding: const EdgeInsets.symmetric(horizontal: 15),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.end,
+        children: [
+          Text("Already have an account?", style: TextStyle(color: Colors.grey[700], fontSize: 14)),
+          const SizedBox(width: 5),
+          GestureDetector(
+            onTap: widget.show,
+            child: const Text(
+              'Login',
+              style: TextStyle(color: Colors.blue, fontSize: 14, fontWeight: FontWeight.bold),
+            ),
+          )
+        ],
+      ),
+    );
   }
 
-  Widget SignUP_bottom() {
+  Widget _buildSignUpButton() {
     return Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 15),
-              child: GestureDetector(
-                onTap: () {
-                  AuthenticationRemote()
-                      .register(email.text, password.text, PasswordConfirm.text);
-                },
-                child: Container(
-                  alignment: Alignment.center,
-                  width: double.infinity,
-                  height: 50,
-                  decoration: BoxDecoration(
-                    color: custom_green,
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: Text(
-                    'Sign UP',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 23,
-                      fontWeight: FontWeight.bold
-                    ),
-                  ),
-                ),
-              ),
-            );
+      padding: const EdgeInsets.symmetric(horizontal: 15),
+      child: GestureDetector(
+        onTap: _handleSignUp,
+        child: Container(
+          alignment: Alignment.center,
+          width: double.infinity,
+          height: 50,
+          decoration: BoxDecoration(
+            color: custom_green,
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: const Text(
+            'Sign Up',
+            style: TextStyle(color: Colors.white, fontSize: 23, fontWeight: FontWeight.bold),
+          ),
+        ),
+      ),
+    );
   }
 
-  Widget textfield(TextEditingController _controller , FocusNode _focusNode,
-      String typeName,IconData iconss) {
+  Widget _buildTextField(
+    TextEditingController controller,
+    FocusNode focusNode,
+    String hint,
+    IconData icon, {
+    bool obscure = false,
+    VoidCallback? toggle,
+  }) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 15),
       child: Container(
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(15),
-          ),
-          child: TextField(
-            controller: _controller,
-            focusNode: _focusNode,
-            style: TextStyle(fontSize: 18,color: Colors.black),
-            decoration: InputDecoration(
-                prefixIcon: Icon(
-                  iconss,
-                  color: _focusNode.hasFocus ? custom_green : Color(0xffc5c5c5),
-                  ),
-                  contentPadding:
-                      EdgeInsets.symmetric(horizontal: 15, vertical: 15),
-                  hintText: typeName,
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(10),
-                    borderSide: BorderSide(
-                      color: Color(0xffc5c5c5), 
-                      width: 2.0,
+        ),
+        child: TextField(
+          controller: controller,
+          focusNode: focusNode,
+          obscureText: obscure,
+          style: const TextStyle(fontSize: 18, color: Colors.black),
+          decoration: InputDecoration(
+            prefixIcon: Icon(icon, color: focusNode.hasFocus ? custom_green : const Color(0xffc5c5c5)),
+            suffixIcon: toggle != null
+                ? IconButton(
+                    icon: Icon(
+                      obscure ? Icons.visibility_off : Icons.visibility,
+                      color: Colors.black,
                     ),
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(10),
-                    borderSide: BorderSide(
-                      color: custom_green, 
-                      width: 2.0,
-                    ),
-                  )),
+                    onPressed: toggle,
+                  )
+                : null,
+            contentPadding: const EdgeInsets.symmetric(horizontal: 15, vertical: 15),
+            hintText: hint,
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(10),
+              borderSide: const BorderSide(color: Color(0xffc5c5c5), width: 2.0),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(10),
+              borderSide: BorderSide(color: custom_green, width: 2.0),
             ),
           ),
-     );
+        ),
+      ),
+    );
   }
 
-  Widget image() {
+  Widget _buildImage() {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 15),
       child: Container(
@@ -166,7 +187,7 @@ class _SignUp_ScreenState extends State<SignUp_Screen> {
         height: 300,
         decoration: BoxDecoration(
           color: backgroundColors,
-          image: DecorationImage(
+          image: const DecorationImage(
             image: AssetImage('images/2.png'),
             fit: BoxFit.cover,
           ),

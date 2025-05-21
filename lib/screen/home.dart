@@ -6,14 +6,9 @@ import 'package:first_project/screen/notification_page.dart';
 import 'package:first_project/screen/team_page.dart';
 import 'package:first_project/screen/more_options_page.dart';
 import 'package:first_project/screen/profile_page.dart';
-
-void main() {
-  runApp(MaterialApp(
-    title: "DoSmart",
-    home: Home_Screen(),
-    theme: ThemeData(primarySwatch: Colors.deepPurple),
-  ));
-}
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:intl/intl.dart';
 
 class Home_Screen extends StatefulWidget {
   @override
@@ -24,89 +19,18 @@ class _Home_ScreenState extends State<Home_Screen> {
   int _currentIndex = 0;
   String _searchQuery = "";
 
-  List<Map<String, dynamic>> todayTasks = [
-    {'title': "Math Homework", 'priority': "High", 'dueDate': "2025-04-18", 'notes': "Complete all exercises.", 'completed': false},
-    {'title': "Team Meeting", 'priority': "High", 'dueDate': "2025-04-18", 'notes': "Discuss project milestones.", 'completed': false},
-  ];
-
-  List<Map<String, dynamic>> upcomingTasks = [
-    {'title': "Science Project", 'priority': "Low", 'dueDate': "2025-05-12", 'notes': "Prepare presentation slides.", 'completed': false},
-    {'title': "Report Submission", 'priority': "High", 'dueDate': "2025-05-14", 'notes': "Submit before deadline.", 'completed': false},
-  ];
-
-  late List<Widget> _pages;
+  final _uid = FirebaseAuth.instance.currentUser!.uid;
 
   @override
-  void initState() {
-    super.initState();
-    _initializePages();
-  }
-
-  void _initializePages() {
-    _pages = [
-      HomeScreenBody(
-        todayTasks: todayTasks,
-        upcomingTasks: upcomingTasks,
-        onDeleteTask: deleteTask,
-        onUpdateTask: updateTask,
-        searchQuery: _searchQuery,
-      ),
+  Widget build(BuildContext context) {
+    final _pages = [
+      TaskListView(uid: _uid, searchQuery: _searchQuery),
       CalendarPage(),
       NotificationsPage(),
       TeamsPage(),
       MoreOptionsPage(),
     ];
-  }
 
-  void addNewTask(Map<String, dynamic> newTask) {
-    DateTime taskDueDate = DateTime.parse(newTask['dueDate']);
-    DateTime today = DateTime.now();
-
-    setState(() {
-      if (taskDueDate.difference(today).inDays <= 2) {
-        todayTasks.add(newTask);
-      } else {
-        upcomingTasks.add(newTask);
-      }
-      _initializePages(); // Refresh home screen
-    });
-  }
-
-  void deleteTask(String taskTitle) {
-    setState(() {
-      todayTasks.removeWhere((task) => task['title'] == taskTitle);
-      upcomingTasks.removeWhere((task) => task['title'] == taskTitle);
-      _initializePages();
-    });
-  }
-
-  void updateTask(String oldTitle, String newTitle, String newNotes) {
-    setState(() {
-      bool found = false;
-      for (var task in todayTasks) {
-        if (task['title'] == oldTitle) {
-          task['title'] = newTitle;
-          task['notes'] = newNotes;
-          found = true;
-          break;
-        }
-      }
-
-      if (!found) {
-        for (var task in upcomingTasks) {
-          if (task['title'] == oldTitle) {
-            task['title'] = newTitle;
-            task['notes'] = newNotes;
-            break;
-          }
-        }
-      }
-      _initializePages();
-    });
-  }
-
-  @override
-  Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Colors.deepPurple,
@@ -114,17 +38,23 @@ class _Home_ScreenState extends State<Home_Screen> {
         actions: [
           IconButton(
             icon: Icon(Icons.search),
-            onPressed: () {
+            onPressed: () async {
+              final tasksSnapshot = await FirebaseFirestore.instance
+                  .collection('users')
+                  .doc(_uid)
+                  .collection('tasks')
+                  .get();
+              final taskList = tasksSnapshot.docs.map((doc) => doc.data()).toList();
               showSearch(
                 context: context,
-                delegate: TaskSearchDelegate(todayTasks + upcomingTasks),
+                delegate: TaskSearchDelegate(taskList),
               );
             },
           ),
           IconButton(
             icon: Icon(Icons.account_circle),
             onPressed: () {
-              Navigator.push(context, MaterialPageRoute(builder: (context) => ProfilePage()));
+              Navigator.push(context, MaterialPageRoute(builder: (_) => ProfilePage()));
             },
           ),
         ],
@@ -132,13 +62,12 @@ class _Home_ScreenState extends State<Home_Screen> {
       body: _pages[_currentIndex],
       floatingActionButton: FloatingActionButton(
         onPressed: () async {
-          final newTask = await Navigator.push(
+          final result = await Navigator.push(
             context,
-            MaterialPageRoute(builder: (context) => CreateTaskPage()),
+            MaterialPageRoute(builder: (_) => CreateTaskPage()),
           );
-
-          if (newTask != null) {
-            addNewTask(newTask);
+          if (result != null && result is bool && result == true) {
+            setState(() {}); // Refresh list after task creation
           }
         },
         backgroundColor: Colors.deepPurple,
@@ -148,6 +77,7 @@ class _Home_ScreenState extends State<Home_Screen> {
         currentIndex: _currentIndex,
         selectedItemColor: Colors.deepPurple,
         unselectedItemColor: Colors.grey,
+        onTap: (index) => setState(() => _currentIndex = index),
         items: [
           BottomNavigationBarItem(icon: Icon(Icons.home), label: "Home"),
           BottomNavigationBarItem(icon: Icon(Icons.calendar_today), label: "Calendar"),
@@ -155,80 +85,185 @@ class _Home_ScreenState extends State<Home_Screen> {
           BottomNavigationBarItem(icon: Icon(Icons.group), label: "Teams"),
           BottomNavigationBarItem(icon: Icon(Icons.more_horiz), label: "More"),
         ],
-        onTap: (index) {
-          setState(() {
-            _currentIndex = index;
-          });
-        },
       ),
     );
   }
 }
 
-TaskSearchDelegate(List<Map<String, dynamic>> list) {
-}
-
-class HomeScreenBody extends StatelessWidget {
-  final List<Map<String, dynamic>> todayTasks;
-  final List<Map<String, dynamic>> upcomingTasks;
-  final Function(String) onDeleteTask;
-  final Function(String, String, String) onUpdateTask;
+class TaskListView extends StatelessWidget {
+  final String uid;
   final String searchQuery;
 
-  HomeScreenBody({
-    required this.todayTasks,
-    required this.upcomingTasks,
-    required this.onDeleteTask,
-    required this.onUpdateTask,
-    required this.searchQuery,
-  });
+  TaskListView({required this.uid, required this.searchQuery});
 
   @override
   Widget build(BuildContext context) {
-    return ListView(
-      padding: EdgeInsets.all(16.0),
-      children: [
-        Text("Today", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-        ...todayTasks.map((task) => TaskTile(task, onDeleteTask, onUpdateTask)),
-        SizedBox(height: 20),
-        Text("Upcoming", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-        ...upcomingTasks.map((task) => TaskTile(task, onDeleteTask, onUpdateTask)),
-      ],
+    return StreamBuilder<QuerySnapshot>(
+      stream: FirebaseFirestore.instance
+          .collection('users')
+          .doc(uid)
+          .collection('tasks')
+          .orderBy('dueDate')
+          .snapshots(),
+      builder: (context, snapshot) {
+        if (!snapshot.hasData) return Center(child: CircularProgressIndicator());
+
+        final tasks = snapshot.data!.docs.map((doc) {
+          final data = doc.data() as Map<String, dynamic>;
+          data['id'] = doc.id;
+          return data;
+        }).where((task) =>
+            task['title'].toLowerCase().contains(searchQuery.toLowerCase()))
+          .toList();
+
+        final today = DateTime.now();
+        final todayTasks = tasks.where((task) =>
+            DateFormat('yyyy-MM-dd').parse(task['dueDate']).difference(today).inDays <= 1).toList();
+        final upcomingTasks = tasks.where((task) =>
+            DateFormat('yyyy-MM-dd').parse(task['dueDate']).difference(today).inDays > 1).toList();
+
+        return ListView(
+          padding: EdgeInsets.all(16),
+          children: [
+            Text("Today", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            ...todayTasks.map((task) => TaskTile(task: task, uid: uid)),
+            SizedBox(height: 20),
+            Text("Upcoming", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            ...upcomingTasks.map((task) => TaskTile(task: task, uid: uid)),
+          ],
+        );
+      },
     );
   }
 }
 
 class TaskTile extends StatelessWidget {
   final Map<String, dynamic> task;
-  final Function(String) onDeleteTask;
-  final Function(String, String, String) onUpdateTask;
+  final String uid;
 
-  TaskTile(this.task, this.onDeleteTask, this.onUpdateTask);
+  TaskTile({required this.task, required this.uid});
+
+  void _toggleCompletion(bool? value) {
+    FirebaseFirestore.instance
+        .collection('users')
+        .doc(uid)
+        .collection('tasks')
+        .doc(task['id'])
+        .update({'completed': value});
+  }
+
+  void _deleteTask(BuildContext context) {
+    FirebaseFirestore.instance
+        .collection('users')
+        .doc(uid)
+        .collection('tasks')
+        .doc(task['id'])
+        .delete();
+  }
+
+  void _updateTask(BuildContext context, String newTitle, String newNotes) {
+    FirebaseFirestore.instance
+        .collection('users')
+        .doc(uid)
+        .collection('tasks')
+        .doc(task['id'])
+        .update({
+          'title': newTitle,
+          'notes': newNotes,
+        });
+  }
 
   @override
   Widget build(BuildContext context) {
+    final bool isCompleted = task['completed'] == true;
+
     return ListTile(
-      title: Text(task['title']),
+      leading: Checkbox(
+        value: isCompleted,
+        onChanged: _toggleCompletion,
+        activeColor: Colors.deepPurple,
+      ),
+      title: Text(
+        task['title'],
+        style: TextStyle(
+          decoration: isCompleted ? TextDecoration.lineThrough : null,
+        ),
+      ),
       subtitle: Text("Priority: ${task['priority']} • Due: ${task['dueDate']}"),
       trailing: IconButton(
         icon: Icon(Icons.delete, color: Colors.red),
-        onPressed: () {
-          onDeleteTask(task['title']);
-        },
+        onPressed: () => _deleteTask(context),
       ),
       onTap: () {
         Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (context) => TaskDetailsPage(
+            builder: (_) => TaskDetailsPage(
               task: task,
-              onDelete: () => onDeleteTask(task['title']),
-              onUpdate: (newTitle, newNotes) => onUpdateTask(task['title'], newTitle, newNotes),
               title: task['title'],
+              onDelete: () => _deleteTask(context),
+              onUpdate: (newTitle, newNotes) =>
+                  _updateTask(context, newTitle, newNotes),
+              docId: '',
             ),
           ),
         );
       },
+    );
+  }
+}
+
+class TaskSearchDelegate extends SearchDelegate {
+  final List<Map<String, dynamic>> allTasks;
+
+  TaskSearchDelegate(this.allTasks);
+
+  @override
+  List<Widget>? buildActions(BuildContext context) {
+    return [
+      IconButton(
+        icon: Icon(Icons.clear),
+        onPressed: () => query = '',
+      ),
+    ];
+  }
+
+  @override
+  Widget? buildLeading(BuildContext context) {
+    return IconButton(
+      icon: Icon(Icons.arrow_back),
+      onPressed: () => close(context, null),
+    );
+  }
+
+  @override
+  Widget buildResults(BuildContext context) {
+    final results = allTasks.where((task) =>
+        task['title'].toLowerCase().contains(query.toLowerCase())).toList();
+
+    return ListView.builder(
+      itemCount: results.length,
+      itemBuilder: (_, index) => ListTile(
+        title: Text(results[index]['title']),
+        subtitle: Text("Due: ${results[index]['dueDate']}"),
+      ),
+    );
+  }
+
+  @override
+  Widget buildSuggestions(BuildContext context) {
+    final suggestions = allTasks.where((task) =>
+        task['title'].toLowerCase().startsWith(query.toLowerCase())).toList();
+
+    return ListView.builder(
+      itemCount: suggestions.length,
+      itemBuilder: (_, index) => ListTile(
+        title: Text(suggestions[index]['title']),
+        onTap: () {
+          query = suggestions[index]['title'];
+          showResults(context);
+        },
+      ),
     );
   }
 }

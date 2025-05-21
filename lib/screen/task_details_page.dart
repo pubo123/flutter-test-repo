@@ -1,11 +1,19 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
 class TaskDetailsPage extends StatefulWidget {
   final Map<String, dynamic> task;
   final Function onDelete;
   final Function(String, String) onUpdate;
+  final String title;
 
-  TaskDetailsPage({required this.task, required this.onDelete, required this.onUpdate, required title});
+  TaskDetailsPage({
+    required this.task,
+    required this.onDelete,
+    required this.onUpdate,
+    required this.title, required String docId,
+  });
 
   @override
   _TaskDetailsPageState createState() => _TaskDetailsPageState();
@@ -14,6 +22,8 @@ class TaskDetailsPage extends StatefulWidget {
 class _TaskDetailsPageState extends State<TaskDetailsPage> {
   late TextEditingController titleController;
   late TextEditingController notesController;
+  bool isUpdating = false;
+  bool isDeleting = false;
 
   @override
   void initState() {
@@ -22,19 +32,43 @@ class _TaskDetailsPageState extends State<TaskDetailsPage> {
     notesController = TextEditingController(text: widget.task['notes']);
   }
 
-  @override
-  void dispose() {
-    titleController.dispose();
-    notesController.dispose();
-    super.dispose();
-  }
+  Future<void> updateTask() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+    final docId = widget.task['id'];
 
-  void saveChanges() {
-    widget.onUpdate(titleController.text, notesController.text);
-    Navigator.pop(context, {
+    setState(() => isUpdating = true);
+
+    await FirebaseFirestore.instance
+        .collection('users')
+        .doc(user.uid)
+        .collection('tasks')
+        .doc(docId)
+        .update({
       'title': titleController.text,
       'notes': notesController.text,
     });
+
+    widget.onUpdate(titleController.text, notesController.text);
+    Navigator.pop(context);
+  }
+
+  Future<void> deleteTask() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+    final docId = widget.task['id'];
+
+    setState(() => isDeleting = true);
+
+    await FirebaseFirestore.instance
+        .collection('users')
+        .doc(user.uid)
+        .collection('tasks')
+        .doc(docId)
+        .delete();
+
+    widget.onDelete();
+    Navigator.pop(context);
   }
 
   void confirmDelete() {
@@ -44,21 +78,24 @@ class _TaskDetailsPageState extends State<TaskDetailsPage> {
         title: Text("Delete Task"),
         content: Text("Are you sure you want to delete this task?"),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text("Cancel"),
-          ),
+          TextButton(onPressed: () => Navigator.pop(context), child: Text("Cancel")),
           TextButton(
             onPressed: () {
-              widget.onDelete();
               Navigator.pop(context);
-              Navigator.pop(context);
+              deleteTask();
             },
             child: Text("Delete", style: TextStyle(color: Colors.red)),
           ),
         ],
       ),
     );
+  }
+
+  @override
+  void dispose() {
+    titleController.dispose();
+    notesController.dispose();
+    super.dispose();
   }
 
   @override
@@ -74,30 +111,31 @@ class _TaskDetailsPageState extends State<TaskDetailsPage> {
           ),
         ],
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            TextField(
-              controller: titleController,
-              decoration: InputDecoration(labelText: "Task Title"),
+      body: isUpdating || isDeleting
+          ? Center(child: CircularProgressIndicator())
+          : Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
+                children: [
+                  TextField(
+                    controller: titleController,
+                    decoration: InputDecoration(labelText: "Task Title"),
+                  ),
+                  SizedBox(height: 10),
+                  TextField(
+                    controller: notesController,
+                    decoration: InputDecoration(labelText: "Notes"),
+                    maxLines: 3,
+                  ),
+                  SizedBox(height: 20),
+                  ElevatedButton(
+                    onPressed: updateTask,
+                    child: Text("Save Changes"),
+                    style: ElevatedButton.styleFrom(backgroundColor: Colors.deepPurple),
+                  ),
+                ],
+              ),
             ),
-            SizedBox(height: 10),
-            TextField(
-              controller: notesController,
-              decoration: InputDecoration(labelText: "Notes"),
-              maxLines: 3,
-            ),
-            SizedBox(height: 20),
-            ElevatedButton(
-              onPressed: saveChanges,
-              child: Text("Save Changes", style: TextStyle(color: Colors.grey)),
-              style: ElevatedButton.styleFrom(backgroundColor: Colors.deepPurple),
-            ),
-          ],
-        ),
-      ),
     );
   }
 }

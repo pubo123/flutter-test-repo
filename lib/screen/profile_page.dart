@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
 
-import 'settings_page.dart'; // Import Settings Page
+import 'login.dart'; // <-- Ensure Login page is imported
+import 'settings_page.dart';
 
 class ProfilePage extends StatefulWidget {
   @override
@@ -12,15 +13,13 @@ class ProfilePage extends StatefulWidget {
 class _ProfilePageState extends State<ProfilePage> {
   File? _image;
   String _name = "Lee Zhi Jia";
-  String _email = "puboleengu@gmail.com";
+  String _email = "oliver@gmail.com";
 
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _emailController = TextEditingController();
 
-  // Function to pick image from gallery
   Future<void> _pickImage() async {
     final pickedFile = await ImagePicker().pickImage(source: ImageSource.gallery);
-
     if (pickedFile != null) {
       setState(() {
         _image = File(pickedFile.path);
@@ -28,7 +27,6 @@ class _ProfilePageState extends State<ProfilePage> {
     }
   }
 
-  // Function to edit profile details
   void _editProfile() {
     _nameController.text = _name;
     _emailController.text = _email;
@@ -72,6 +70,35 @@ class _ProfilePageState extends State<ProfilePage> {
     );
   }
 
+  void _confirmLogout() {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text("Confirm Logout"),
+          content: Text("Are you sure you want to log out?"),
+          actions: [
+            TextButton(
+              child: Text("Cancel"),
+              onPressed: () => Navigator.of(context).pop(),
+            ),
+            TextButton(
+              child: Text("Logout"),
+              onPressed: () {
+                Navigator.of(context).pop(); // close dialog
+                Navigator.pushAndRemoveUntil(
+                  context,
+                  MaterialPageRoute(builder: (context) => LogIN_Screen(() {})), // pass dummy show callback
+                  (route) => false,
+                );
+              },
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -88,7 +115,9 @@ class _ProfilePageState extends State<ProfilePage> {
               onTap: _pickImage,
               child: CircleAvatar(
                 radius: 50,
-                backgroundImage: _image != null ? FileImage(_image!) : AssetImage('images/3.jpg') as ImageProvider,
+                backgroundImage: _image != null
+                    ? FileImage(_image!)
+                    : AssetImage('images/3.jpg') as ImageProvider,
                 backgroundColor: Colors.transparent,
                 child: _image == null
                     ? Icon(Icons.camera_alt, size: 40, color: Colors.white)
@@ -114,15 +143,14 @@ class _ProfilePageState extends State<ProfilePage> {
               leading: Icon(Icons.settings, color: Colors.deepPurple),
               title: Text("Settings"),
               onTap: () {
-                Navigator.push(context, MaterialPageRoute(builder: (context) => SettingsPage()));
+                Navigator.push(context,
+                    MaterialPageRoute(builder: (context) => SettingsPage()));
               },
             ),
             ListTile(
               leading: Icon(Icons.logout, color: Colors.red),
               title: Text("Logout"),
-              onTap: () {
-                Navigator.popUntil(context, ModalRoute.withName(Navigator.defaultRouteName));
-              },
+              onTap: _confirmLogout,
             ),
           ],
         ),

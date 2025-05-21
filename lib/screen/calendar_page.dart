@@ -1,74 +1,61 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class CalendarPage extends StatelessWidget {
-  final List<Map<String, String>> tasks = [
-    {'title': "Math Homework", 'dueDate': "2025-04-18"},
-    {'title': "Team Meeting", 'dueDate': "2025-04-18"},
-    {'title': "Science Project", 'dueDate': "2025-05-12"},
-    {'title': "Report Submission", 'dueDate': "2025-05-14"},
-  ];
+  final String uid = FirebaseAuth.instance.currentUser!.uid;
 
   @override
   Widget build(BuildContext context) {
-    // Sorting tasks by due date
-    tasks.sort((a, b) {
-      DateTime dateA = DateFormat('yyyy-MM-dd').parse(a['dueDate']!);
-      DateTime dateB = DateFormat('yyyy-MM-dd').parse(b['dueDate']!);
-      return dateA.compareTo(dateB);
-    });
-
     return Scaffold(
       appBar: AppBar(
-        title: Text("Calendar"),
+        title: Text("📆 Calendar View"),
         backgroundColor: Colors.deepPurple,
       ),
-      body: Column(
-        children: [
-          SizedBox(height: 20),
-          Text(
-            "📆 Tasks Calendar View",
-            style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
-          ),
-          SizedBox(height: 10),
-          Expanded(
-            child: ListView.builder(
-              itemCount: tasks.length,
-              itemBuilder: (context, index) {
-                final task = tasks[index];
-                DateTime dueDate = DateFormat('yyyy-MM-dd').parse(task['dueDate']!);
-                String formattedDate = DateFormat('MMMM dd, yyyy').format(dueDate);
+      body: StreamBuilder<QuerySnapshot>(
+        stream: FirebaseFirestore.instance
+            .collection('users')
+            .doc(uid)
+            .collection('tasks')
+            .orderBy('dueDate')
+            .snapshots(),
+        builder: (context, snapshot) {
+          if (!snapshot.hasData) return Center(child: CircularProgressIndicator());
 
-                return Card(
-                  margin: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                  elevation: 4,
-                  child: ListTile(
-                    leading: CircleAvatar(
-                      backgroundColor: Colors.deepPurple,
-                      child: Icon(Icons.event, color: Colors.white),
-                    ),
-                    title: Text(
-                      task['title']!,
-                      style: TextStyle(fontWeight: FontWeight.bold),
-                    ),
-                    subtitle: Text(
-                      "Due Date: $formattedDate",
-                      style: TextStyle(color: Colors.grey[700]),
-                    ),
-                  ),
-                );
-              },
-            ),
-          ),
-        ],
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          // Action to add new task
+          final tasks = snapshot.data!.docs.map((doc) => doc.data() as Map<String, dynamic>).toList();
+
+          final Map<String, List<Map<String, dynamic>>> groupedTasks = {};
+          for (var task in tasks) {
+            final date = DateFormat('yyyy-MM-dd').format(DateTime.parse(task['dueDate']));
+            groupedTasks.putIfAbsent(date, () => []).add(task);
+          }
+
+          final sortedDates = groupedTasks.keys.toList()
+            ..sort((a, b) => a.compareTo(b));
+
+          return ListView.builder(
+            itemCount: sortedDates.length,
+            itemBuilder: (context, index) {
+              final date = sortedDates[index];
+              final dateTasks = groupedTasks[date]!;
+
+              return ExpansionTile(
+                title: Text(
+                  DateFormat('MMMM dd, yyyy').format(DateTime.parse(date)),
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+                children: dateTasks.map((task) {
+                  return ListTile(
+                    leading: Icon(Icons.event_note, color: Colors.deepPurple),
+                    title: Text(task['title']),
+                    subtitle: Text("Priority: ${task['priority']}"),
+                  );
+                }).toList(),
+              );
+            },
+          );
         },
-        child: Icon(Icons.add),
-        backgroundColor: Colors.deepPurple,
       ),
     );
   }
